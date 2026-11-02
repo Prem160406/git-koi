@@ -225,7 +225,12 @@ fn render_wukong_day(snapshot_path: &Path) -> Result<RenderedWukongDay, String> 
     let gif_bytes = encode_gif(&frames).map_err(|encoding_error| encoding_error.to_string())?;
     let png_bytes = encode_png(&render_wukong_frame(stage, WukongBehavior::Meditating, 0))
         .map_err(|encoding_error| encoding_error.to_string())?;
-    let caption = format!("{} · {:?} · {} contributions", stage.name(), behavior, development.total_contributions);
+    let caption = format!(
+        "{} · {:?} · {} contributions",
+        stage.name(),
+        behavior,
+        development.total_contributions
+    );
     let preview_html = format!(
         "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Wukong preview</title><style>body{{margin:0;padding:24px;background:#17111f;color:#f4d39a;font:16px system-ui}}main{{max-width:720px;margin:auto}}img{{width:min(100%,512px);height:auto;image-rendering:pixelated;background:#17111f}}p{{color:#c7a98c}}</style><main><h1>{}</h1><img src=\"wukong.gif\" alt=\"Animated Wukong\"><p>Still portrait</p><img src=\"wukong.png\" alt=\"Wukong portrait\"></main></html>",
         caption
