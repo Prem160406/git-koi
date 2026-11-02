@@ -260,8 +260,8 @@ fn draw_leaves(pixels: &mut [[u8; 4]], frame: u32, behavior: WukongBehavior) {
         WukongBehavior::CloudSurfing => 3,
     };
     for i in 0..7 {
-        let x = (i * 43 + (frame * speed + i * 7) as i32) % 270 - 7;
-        let y = (i * 31 + (frame * speed / 2 + i * 11) as i32) % 220 + 10;
+        let x = (i * 43 + (frame * speed + (i * 7) as u32) as i32) % 270 - 7;
+        let y = (i * 31 + (frame * speed / 2 + (i * 11) as u32) as i32) % 220 + 10;
         let color = match i % 3 {
             0 => LEAF_RUST,
             1 => LEAF_AMBER,
