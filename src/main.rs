@@ -33,7 +33,8 @@ The files are replaced only after all of them render.
 render-wukong writes wukong.gif, wukong.png, and preview.html using the contribution-driven Wukong evolution line.
 Errors go to stderr and exit 1; invalid usage exits 2.
 Examples: git-koi collect octocat --output snapshot.json
-          git-koi render snapshot.json --output-dir koi --body asagi";
+          git-koi render snapshot.json --output-dir koi --body asagi
+          git-koi render-wukong snapshot.json --output-dir wukong";
 
 /// Each body's name on the command line.
 const BODY_NAMES: [(&str, KoiBody); 6] = [
@@ -52,7 +53,7 @@ fn main() -> ExitCode {
         .map(|argument| argument.to_str())
         .collect();
     match argument_texts.as_slice() {
-        [Some("--help")] | [Some("collect" | "render"), Some("--help")] => {
+        [Some("--help")] | [Some("collect" | "render" | "render-wukong"), Some("--help")] => {
             println!("{USAGE}");
             ExitCode::SUCCESS
         }
