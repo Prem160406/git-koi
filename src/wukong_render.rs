@@ -167,11 +167,10 @@ fn atlas() -> &'static Atlas {
 fn draw_character(pixels: &mut [[u8; 4]], stage: EvolutionStage, bob: i32, lunge: i32) {
     let rect = SPRITES[stage.index() as usize];
     let atlas = atlas();
-    let max_width = 226.0;
-    let max_height = 224.0;
-    let scale = (max_width / rect.width as f64)
-        .min(max_height / rect.height as f64)
-        .min(2.0);
+    // Deliberately increase the target height at every permanent evolution stage.
+    // The final form is allowed to use nearly the full canvas width so it feels imposing.
+    const TARGET_HEIGHTS: [f64; 5] = [120.0, 144.0, 164.0, 194.0, 224.0];
+    let scale = TARGET_HEIGHTS[stage.index() as usize] / rect.height as f64;
     let draw_width = (rect.width as f64 * scale).round().max(1.0) as u32;
     let draw_height = (rect.height as f64 * scale).round().max(1.0) as u32;
     let left = (FRAME_WIDTH_PIXELS as i32 - draw_width as i32) / 2 + lunge;
@@ -259,8 +258,8 @@ fn draw_aura(
 ) {
     let level = stage.index() as i32;
     let pulse = (phase.sin() * 2.0).round() as i32;
-    let radius_x = 35 + level * 7 + pulse;
-    let radius_y = 54 + level * 8 + pulse;
+    let radius_x = 44 + level * 9 + pulse;
+    let radius_y = 56 + level * 12 + pulse;
     let center_x = 128;
     let center_y = 122;
     draw_ring(pixels, center_x, center_y, radius_x, radius_y, GOLD_DARK);
