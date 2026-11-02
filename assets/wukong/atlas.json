@@ -1,0 +1,13 @@
+{
+  "atlas_width": 569,
+  "atlas_height": 164,
+  "source": "User-approved evolution reference, cropped to transparent character sprites and reduced with nearest-neighbour sampling",
+  "sprites": {
+    "celestial_stone": {"x": 0, "y": 75, "width": 70, "height": 89},
+    "stone_born_monkey": {"x": 70, "y": 71, "width": 74, "height": 93},
+    "handsome_monkey_king": {"x": 144, "y": 47, "width": 91, "height": 117},
+    "great_sage": {"x": 235, "y": 19, "width": 150, "height": 145},
+    "fighting_buddha": {"x": 385, "y": 0, "width": 184, "height": 164}
+  },
+  "note": "These are reference cutouts, not animation-ready frame sequences."
+}
