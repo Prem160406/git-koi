@@ -68,8 +68,7 @@ impl WukongBehavior {
             Behavior::Cruise => {
                 let current_streak_weeks = match &development.streaks.recent {
                     Some(RecentStreak::Current(weeks)) => weeks.len(),
-                    Some(RecentStreak::Ended { weeks, .. }) => weeks.len(),
-                    None => 0,
+                    Some(RecentStreak::Ended { .. }) | None => 0,
                 };
                 if current_streak_weeks >= 6 {
                     Self::CloudSurfing
@@ -121,15 +120,14 @@ pub fn render_wukong_frame(
     };
 
     draw_leaves(&mut pixels, frame_index, behavior);
+    if behavior == WukongBehavior::CloudSurfing {
+        draw_cloud_surf_effect(&mut pixels, frame_index);
+    }
     draw_character(&mut pixels, stage, bob, lunge);
 
     if behavior == WukongBehavior::Fighting {
         draw_energy_sweep(&mut pixels, frame_index);
     }
-    if behavior == WukongBehavior::CloudSurfing {
-        draw_cloud_surf_effect(&mut pixels, frame_index);
-    }
-
     KoiFrame::from_rgba_pixels(pixels)
 }
 
