@@ -19,3 +19,4 @@ pub mod motion;
 pub mod output;
 pub mod render;
 pub mod wukong;
+pub mod wukong_render;
