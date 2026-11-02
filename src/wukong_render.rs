@@ -102,7 +102,10 @@ pub fn render_wukong_frame(
     behavior: WukongBehavior,
     frame_index: u32,
 ) -> KoiFrame {
-    let mut pixels = vec![[BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], 255]; (FRAME_WIDTH_PIXELS * FRAME_HEIGHT_PIXELS) as usize];
+    let mut pixels = vec![
+        [BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], 255];
+        (FRAME_WIDTH_PIXELS * FRAME_HEIGHT_PIXELS) as usize
+    ];
     let phase = frame_index as f64 / behavior.frame_count() as f64 * std::f64::consts::TAU;
     draw_background_clouds(&mut pixels, phase);
     draw_aura(&mut pixels, stage, behavior, phase);
@@ -213,18 +216,47 @@ fn draw_cloud(pixels: &mut [[u8; 4]], x: i32, y: i32, scale: f64) {
         (18, 4, 9, 5),
     ];
     for (px, py, rx, ry) in puffs {
-        fill_ellipse(pixels, x + (px as f64 * s) as i32, y + (py as f64 * s) as i32,
-            (rx as f64 * s) as i32, (ry as f64 * s) as i32, CLOUD_DARK);
+        fill_ellipse(
+            pixels,
+            x + (px as f64 * s) as i32,
+            y + (py as f64 * s) as i32,
+            (rx as f64 * s) as i32,
+            (ry as f64 * s) as i32,
+            CLOUD_DARK,
+        );
     }
-    fill_rect(pixels, x - (17.0 * s) as i32, y + (5.0 * s) as i32,
-        (39.0 * s) as i32, (4.0 * s) as i32, CLOUD_DARK);
-    fill_ellipse(pixels, x - (4.0 * s) as i32, y - (2.0 * s) as i32,
-        (9.0 * s) as i32, (6.0 * s) as i32, CLOUD_MID);
-    fill_ellipse(pixels, x + (12.0 * s) as i32, y + (2.0 * s) as i32,
-        (7.0 * s) as i32, (4.0 * s) as i32, CLOUD_LIGHT);
+    fill_rect(
+        pixels,
+        x - (17.0 * s) as i32,
+        y + (5.0 * s) as i32,
+        (39.0 * s) as i32,
+        (4.0 * s) as i32,
+        CLOUD_DARK,
+    );
+    fill_ellipse(
+        pixels,
+        x - (4.0 * s) as i32,
+        y - (2.0 * s) as i32,
+        (9.0 * s) as i32,
+        (6.0 * s) as i32,
+        CLOUD_MID,
+    );
+    fill_ellipse(
+        pixels,
+        x + (12.0 * s) as i32,
+        y + (2.0 * s) as i32,
+        (7.0 * s) as i32,
+        (4.0 * s) as i32,
+        CLOUD_LIGHT,
+    );
 }
 
-fn draw_aura(pixels: &mut [[u8; 4]], stage: EvolutionStage, behavior: WukongBehavior, phase: f64) {
+fn draw_aura(
+    pixels: &mut [[u8; 4]],
+    stage: EvolutionStage,
+    behavior: WukongBehavior,
+    phase: f64,
+) {
     let level = stage.index() as i32;
     let pulse = (phase.sin() * 2.0).round() as i32;
     let radius_x = 35 + level * 7 + pulse;
@@ -292,7 +324,9 @@ fn draw_cloud_surf_effect(pixels: &mut [[u8; 4]], phase: f64) {
 }
 
 fn fill_ellipse(pixels: &mut [[u8; 4]], cx: i32, cy: i32, rx: i32, ry: i32, color: [u8; 3]) {
-    if rx <= 0 || ry <= 0 { return; }
+    if rx <= 0 || ry <= 0 {
+        return;
+    }
     for y in -ry..=ry {
         for x in -rx..=rx {
             if x * x * ry * ry + y * y * rx * rx <= rx * rx * ry * ry {
