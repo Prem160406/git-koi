@@ -1,0 +1,37 @@
+# Copy into your profile repository as .github/workflows/wukong.yml.
+# Embed <img src="wukong/wukong.gif" width="256" alt="My Wukong"> in README.md.
+name: Wukong
+
+on:
+  schedule:
+    - cron: "20 0 * * *"
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/wukong.yml]
+
+permissions:
+  contents: write
+
+concurrency: wukong
+
+jobs:
+  wukong:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Prem160406/git-koi@wukong/prototype
+        with:
+          character: wukong
+          output-dir: wukong
+      - name: Commit Wukong if it changed
+        shell: bash
+        run: |
+          git add wukong/wukong.gif
+          if git diff --cached --quiet; then
+            echo "Wukong is unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet --message "wukong: evolve from GitHub activity"
+          git push --quiet
