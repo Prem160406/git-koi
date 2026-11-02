@@ -14,9 +14,12 @@ use git_koi::koi::derive_koi_development;
 use git_koi::motion::frame_count;
 use git_koi::output::{encode_gif, encode_png, encode_preview_html};
 use git_koi::render::{KoiFrame, render_koi, render_swim_frame};
+use git_koi::wukong::{EvolutionThresholds, stage_for_contributions};
+use git_koi::wukong_render::{WukongBehavior, render_wukong_frame};
 
 const USAGE: &str = "Usage: git-koi collect LOGIN [--output FILE]
        git-koi render SNAPSHOT --output-dir DIR [--body BODY]
+       git-koi render-wukong SNAPSHOT --output-dir DIR
        git-koi --help | --version
 Collect LOGIN's public GitHub snapshot as JSON through `gh api`: public owned and
 contributed repositories, and daily contributions from the account's creation
@@ -27,6 +30,7 @@ Render a collected SNAPSHOT into DIR: koi.gif swims the behavior chosen for its
 observation date, koi.png is the still koi, and preview.html shows both on light and
 dark backgrounds. BODY is white (the default), black, asagi, tea, gold, or platinum.
 The files are replaced only after all of them render.
+render-wukong writes wukong.gif, wukong.png, and preview.html using the contribution-driven Wukong evolution line.
 Errors go to stderr and exit 1; invalid usage exits 2.
 Examples: git-koi collect octocat --output snapshot.json
           git-koi render snapshot.json --output-dir koi --body asagi";
@@ -59,6 +63,11 @@ fn main() -> ExitCode {
         [Some("collect"), Some(login)] if !login.starts_with('-') => run_collect(login, None),
         [Some("collect"), Some(login), Some("--output"), _] if !login.starts_with('-') => {
             run_collect(login, Some(Path::new(&program_arguments[3])))
+        }
+        [Some("render-wukong"), Some(snapshot_path), Some("--output-dir"), _]
+            if !snapshot_path.starts_with('-') =>
+        {
+            run_render_wukong(Path::new(snapshot_path), Path::new(&program_arguments[3]))
         }
         [Some("render"), Some(snapshot_path), Some("--output-dir"), _]
             if !snapshot_path.starts_with('-') =>
@@ -165,6 +174,66 @@ fn render_day(snapshot_path: &Path, koi_body: KoiBody) -> Result<RenderedDay, St
         output_files: [
             ("koi.gif", gif_bytes),
             ("koi.png", png_bytes),
+            ("preview.html", preview_html.into_bytes()),
+        ],
+    })
+}
+
+fn run_render_wukong(snapshot_path: &Path, output_directory: &Path) -> ExitCode {
+    let render_result = render_wukong_day(snapshot_path).and_then(|rendered_day| {
+        fs::create_dir_all(output_directory)
+            .map_err(|create_error| format!("{}: {create_error}", output_directory.display()))?;
+        let mut written_paths = Vec::new();
+        for (file_name, file_bytes) in rendered_day.output_files {
+            let output_path = output_directory.join(file_name);
+            replace_file(&output_path, &file_bytes)?;
+            written_paths.push(output_path.display().to_string());
+        }
+        println!("{}: wrote {}", rendered_day.caption, written_paths.join(", "));
+        Ok(())
+    });
+    match render_result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error_message) => {
+            eprintln!("git-koi: {error_message}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+struct RenderedWukongDay {
+    caption: String,
+    output_files: [(&'static str, Vec<u8>); 3],
+}
+
+fn render_wukong_day(snapshot_path: &Path) -> Result<RenderedWukongDay, String> {
+    let snapshot_json = fs::read_to_string(snapshot_path)
+        .map_err(|read_error| format!("{}: {read_error}", snapshot_path.display()))?;
+    let account_snapshot: AccountSnapshot = serde_json::from_str(&snapshot_json)
+        .map_err(|parse_error| format!("{}: {parse_error}", snapshot_path.display()))?;
+    let development = derive_koi_development(&account_snapshot)
+        .map_err(|development_error| development_error.to_string())?;
+    let stage = stage_for_contributions(
+        development.total_contributions,
+        EvolutionThresholds::default(),
+    );
+    let behavior = WukongBehavior::from_development(&development);
+    let frames: Vec<KoiFrame> = (0..behavior.frame_count())
+        .map(|frame_index| render_wukong_frame(stage, behavior, frame_index))
+        .collect();
+    let gif_bytes = encode_gif(&frames).map_err(|encoding_error| encoding_error.to_string())?;
+    let png_bytes = encode_png(&render_wukong_frame(stage, WukongBehavior::Meditating, 0))
+        .map_err(|encoding_error| encoding_error.to_string())?;
+    let caption = format!("{} · {:?} · {} contributions", stage.name(), behavior, development.total_contributions);
+    let preview_html = format!(
+        "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Wukong preview</title><style>body{{margin:0;padding:24px;background:#17111f;color:#f4d39a;font:16px system-ui}}main{{max-width:720px;margin:auto}}img{{width:min(100%,512px);height:auto;image-rendering:pixelated;background:#17111f}}p{{color:#c7a98c}}</style><main><h1>{}</h1><img src=\"wukong.gif\" alt=\"Animated Wukong\"><p>Still portrait</p><img src=\"wukong.png\" alt=\"Wukong portrait\"></main></html>",
+        caption
+    );
+    Ok(RenderedWukongDay {
+        caption,
+        output_files: [
+            ("wukong.gif", gif_bytes),
+            ("wukong.png", png_bytes),
             ("preview.html", preview_html.into_bytes()),
         ],
     })
