@@ -72,6 +72,17 @@ runs:
           koi|wukong) ;;
           *) echo "character must be 'koi' or 'wukong'" >&2; exit 2 ;;
         esac
+    - name: Install the Rust toolchain
+      if: inputs.character == 'wukong'
+      uses: dtolnay/rust-toolchain@stable
+    - name: Build the Wukong renderer
+      if: inputs.character == 'wukong'
+      shell: bash
+      run: cargo build --release --manifest-path "$GITHUB_ACTION_PATH/Cargo.toml"
+    - name: Add the Wukong binary to PATH
+      if: inputs.character == 'wukong'
+      shell: bash
+      run: echo "$GITHUB_ACTION_PATH/target/release" >> "$GITHUB_PATH"
     - name: Collect the account snapshot
       shell: bash
       env:
@@ -99,4 +110,4 @@ runs:
       shell: bash
       env:
         WUKONG_OUTPUT_DIR: ${{ inputs.output-dir }}
-      run: "$GITHUB_ACTION_PATH/target/release/git-koi" render-wukong "$RUNNER_TEMP/koi-snapshot.json" --output-dir "$WUKONG_OUTPUT_DIR"
+      run: git-koi render-wukong "$RUNNER_TEMP/koi-snapshot.json" --output-dir "$WUKONG_OUTPUT_DIR"
