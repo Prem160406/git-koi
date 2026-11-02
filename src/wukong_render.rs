@@ -61,7 +61,7 @@ pub enum WukongBehavior {
 impl WukongBehavior {
     /// Translate the existing activity classifier into Wukong's behaviour vocabulary.
     pub fn from_development(development: &KoiDevelopment) -> Self {
-        match Behavior::from(crate::behavior::select_behavior(development)) {
+        match crate::behavior::select_behavior(development) {
             Behavior::DeepRest | Behavior::Rest => Self::Meditating,
             Behavior::SurfaceFeeding => Self::Training,
             Behavior::Dart => Self::Fighting,
@@ -80,7 +80,7 @@ impl WukongBehavior {
         }
     }
 
-    fn frame_count(self) -> u32 {
+    pub fn frame_count(self) -> u32 {
         match self {
             Self::Meditating => 72,
             Self::Training => 48,
@@ -130,12 +130,7 @@ pub fn render_wukong_frame(
         draw_cloud_surf_effect(&mut pixels, frame_index);
     }
 
-    KoiFrame::from_rgba_pixels(
-        pixels
-            .chunks_exact(4)
-            .map(|channels| [channels[0], channels[1], channels[2], channels[3]])
-            .collect(),
-    )
+    KoiFrame::from_rgba_pixels(pixels)
 }
 
 fn atlas() -> &'static Atlas {
