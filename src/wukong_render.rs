@@ -103,10 +103,9 @@ pub fn render_wukong_frame(
     frame_index: u32,
 ) -> KoiFrame {
     let mut pixels = vec![[BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], 255]; (FRAME_WIDTH_PIXELS * FRAME_HEIGHT_PIXELS) as usize];
-    draw_background_clouds(&mut pixels, frame_index);
-    draw_aura(&mut pixels, stage, behavior, frame_index);
-
     let phase = frame_index as f64 / behavior.frame_count() as f64 * std::f64::consts::TAU;
+    draw_background_clouds(&mut pixels, phase);
+    draw_aura(&mut pixels, stage, behavior, phase);
     let bob = match behavior {
         WukongBehavior::Meditating => (phase.sin() * 1.5).round() as i32,
         WukongBehavior::Training => (phase.sin() * 3.0).round() as i32,
@@ -119,14 +118,14 @@ pub fn render_wukong_frame(
         0
     };
 
-    draw_leaves(&mut pixels, frame_index, behavior);
+    draw_leaves(&mut pixels, phase, behavior);
     if behavior == WukongBehavior::CloudSurfing {
-        draw_cloud_surf_effect(&mut pixels, frame_index);
+        draw_cloud_surf_effect(&mut pixels, phase);
     }
     draw_character(&mut pixels, stage, bob, lunge);
 
     if behavior == WukongBehavior::Fighting {
-        draw_energy_sweep(&mut pixels, frame_index);
+        draw_energy_sweep(&mut pixels, phase);
     }
     KoiFrame::from_rgba_pixels(pixels)
 }
@@ -197,8 +196,8 @@ fn draw_character(pixels: &mut [[u8; 4]], stage: EvolutionStage, bob: i32, lunge
     }
 }
 
-fn draw_background_clouds(pixels: &mut [[u8; 4]], frame_index: u32) {
-    let drift = (frame_index / 8) as i32 % 16;
+fn draw_background_clouds(pixels: &mut [[u8; 4]], phase: f64) {
+    let drift = (phase.sin() * 8.0).round() as i32;
     draw_cloud(pixels, -16 + drift, 42, 1.0);
     draw_cloud(pixels, 158 - drift / 2, 25, 0.72);
     draw_cloud(pixels, 178 + drift / 3, 106, 0.55);
@@ -225,9 +224,9 @@ fn draw_cloud(pixels: &mut [[u8; 4]], x: i32, y: i32, scale: f64) {
         (7.0 * s) as i32, (4.0 * s) as i32, CLOUD_LIGHT);
 }
 
-fn draw_aura(pixels: &mut [[u8; 4]], stage: EvolutionStage, behavior: WukongBehavior, frame: u32) {
+fn draw_aura(pixels: &mut [[u8; 4]], stage: EvolutionStage, behavior: WukongBehavior, phase: f64) {
     let level = stage.index() as i32;
-    let pulse = (frame / 3) as i32 % 3;
+    let pulse = (phase.sin() * 2.0).round() as i32;
     let radius_x = 35 + level * 7 + pulse;
     let radius_y = 54 + level * 8 + pulse;
     let center_x = 128;
@@ -250,7 +249,7 @@ fn draw_ring(pixels: &mut [[u8; 4]], cx: i32, cy: i32, rx: i32, ry: i32, color: 
     }
 }
 
-fn draw_leaves(pixels: &mut [[u8; 4]], frame: u32, behavior: WukongBehavior) {
+fn draw_leaves(pixels: &mut [[u8; 4]], phase: f64, behavior: WukongBehavior) {
     let speed = match behavior {
         WukongBehavior::Meditating => 1,
         WukongBehavior::Training => 2,
@@ -258,8 +257,9 @@ fn draw_leaves(pixels: &mut [[u8; 4]], frame: u32, behavior: WukongBehavior) {
         WukongBehavior::CloudSurfing => 3,
     };
     for i in 0..7 {
-        let x = (i * 43 + (frame * speed + (i * 7) as u32) as i32) % 270 - 7;
-        let y = (i * 31 + (frame * speed / 2 + (i * 11) as u32) as i32) % 220 + 10;
+        let angle = phase * speed as f64 + i as f64 * std::f64::consts::TAU / 7.0;
+        let x = 16 + i * 34 + (angle.cos() * 9.0).round() as i32;
+        let y = 28 + i * 27 + (angle.sin() * 7.0).round() as i32;
         let color = match i % 3 {
             0 => LEAF_RUST,
             1 => LEAF_AMBER,
@@ -272,19 +272,20 @@ fn draw_leaves(pixels: &mut [[u8; 4]], frame: u32, behavior: WukongBehavior) {
     }
 }
 
-fn draw_energy_sweep(pixels: &mut [[u8; 4]], frame: u32) {
-    let step = (frame % 36) as i32;
-    let radius = 24 + step / 2;
-    for degree in 205..330 {
-        let radians = degree as f64 * std::f64::consts::PI / 180.0;
+fn draw_energy_sweep(pixels: &mut [[u8; 4]], phase: f64) {
+    let radius = 32;
+    let start = 205.0 + phase.sin() * 18.0;
+    for offset in 0..125 {
+        let degree = start + offset as f64;
+        let radians = degree * std::f64::consts::PI / 180.0;
         let x = 128 + (radians.cos() * radius as f64).round() as i32;
         let y = 138 + (radians.sin() * radius as f64 * 0.75).round() as i32;
-        put_pixel(pixels, x, y, if degree % 3 == 0 { GOLD_LIGHT } else { GOLD });
+        put_pixel(pixels, x, y, if offset % 3 == 0 { GOLD_LIGHT } else { GOLD });
     }
 }
 
-fn draw_cloud_surf_effect(pixels: &mut [[u8; 4]], frame: u32) {
-    let bob = (frame as f64 / 60.0 * std::f64::consts::TAU).sin().round() as i32;
+fn draw_cloud_surf_effect(pixels: &mut [[u8; 4]], phase: f64) {
+    let bob = (phase.sin() * 1.5).round() as i32;
     draw_cloud(pixels, 128, 228 + bob, 1.15);
     draw_cloud(pixels, 98, 234 + bob, 0.7);
     draw_cloud(pixels, 157, 233 + bob, 0.7);
