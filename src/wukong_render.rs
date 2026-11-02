@@ -248,6 +248,14 @@ fn draw_cloud(pixels: &mut [[u8; 4]], x: i32, y: i32, scale: f64) {
         (4.0 * s) as i32,
         CLOUD_LIGHT,
     );
+    // A tiny curled highlight gives the plum clouds their traditional swirl motif.
+    for step in 0..18 {
+        let angle = step as f64 / 17.0 * std::f64::consts::PI * 1.6;
+        let radius = (0.7 + step as f64 * 0.38) * s;
+        let spiral_x = x - (4.0 * s) as i32 + (angle.cos() * radius).round() as i32;
+        let spiral_y = y - (2.0 * s) as i32 + (angle.sin() * radius * 0.65).round() as i32;
+        put_pixel(pixels, spiral_x, spiral_y, CLOUD_LIGHT);
+    }
 }
 
 fn draw_aura(
