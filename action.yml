@@ -77,6 +77,9 @@ runs:
         KOI_OUTPUT_DIR: ${{ inputs.output-dir }}
       run: |
         git-koi render "$RUNNER_TEMP/koi-snapshot.json" --output-dir "$KOI_OUTPUT_DIR" --body "$KOI_BODY"
+    - name: Install the Rust toolchain
+      if: inputs.character == 'wukong'
+      uses: dtolnay/rust-toolchain@stable
     - name: Build the Wukong renderer
       if: inputs.character == 'wukong'
       shell: bash
