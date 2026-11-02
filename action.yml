@@ -18,7 +18,7 @@ inputs:
     default: white
   output-dir:
     description:
-      Folder, relative to the workspace, that receives koi.gif, koi.png, and
+      Folder, relative to the workspace, that receives the character GIF, PNG, and
       preview.html.
     default: koi
   token:
@@ -30,6 +30,7 @@ runs:
   using: composite
   steps:
     - name: Download the git-koi release this Action belongs to
+      if: inputs.character == 'koi'
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
@@ -62,6 +63,15 @@ runs:
         fi
         tar -xzf "$archive"
         echo "$install_dir/git-koi-$version-$target" >> "$GITHUB_PATH"
+    - name: Validate character selection
+      shell: bash
+      env:
+        CHARACTER: ${{ inputs.character }}
+      run: |
+        case "$CHARACTER" in
+          koi|wukong) ;;
+          *) echo "character must be 'koi' or 'wukong'" >&2; exit 2 ;;
+        esac
     - name: Collect the account snapshot
       shell: bash
       env:
