@@ -48,6 +48,29 @@ activity such as a push. A koi that stops changing during a long quiet stretch
 adds no commits, so its schedule can pause and does not resume on its own.
 Re-enable it from the Actions tab or with `gh workflow enable koi.yml`.
 
+## On Your Profile README with Wukong
+
+The Wukong prototype is available on the `wukong/prototype` branch while its
+art and animation pipeline is being validated. Copy
+[examples/wukong-profile-workflow.yml](../examples/wukong-profile-workflow.yml)
+into your profile repository as `.github/workflows/wukong.yml`, then embed:
+
+```html
+<img src="wukong/wukong.gif" width="256" alt="My Wukong" />
+```
+
+The example selects `character: wukong` and writes `wukong.gif`,
+`wukong.png`, and `preview.html`. The permanent form is derived from lifetime
+GitHub-recognized contributions. Recent activity selects Meditating, Training,
+Fighting, or Cloud Surfing; inactivity never reverses an evolution.
+
+The default thresholds (50, 1,000, 5,000, and 10,000 contributions) are
+prototype values, not final balancing. The current Wukong renderer uses one
+approved reference pose per form and procedural movement/effects. Dedicated
+walk, staff-attack, and transformation frame sequences are still future asset
+work. The Wukong action path builds the branch's Rust source, so it needs a
+working Rust toolchain on the runner.
+
 ## From the Command Line
 
 Install one of two ways. With Rust at or above the `rust-version` in
