@@ -7,6 +7,9 @@ branding:
   color: blue
 
 inputs:
+  character:
+    description: Character to render, either koi or wukong.
+    default: koi
   login:
     description: Account whose koi to draw.
     default: ${{ github.repository_owner }}
@@ -67,10 +70,20 @@ runs:
       run:
         git-koi collect "$KOI_LOGIN" --output "$RUNNER_TEMP/koi-snapshot.json"
     - name: Render the koi
+      if: inputs.character == 'koi'
       shell: bash
       env:
         KOI_BODY: ${{ inputs.body }}
         KOI_OUTPUT_DIR: ${{ inputs.output-dir }}
-      run:
-        git-koi render "$RUNNER_TEMP/koi-snapshot.json" --output-dir
-        "$KOI_OUTPUT_DIR" --body "$KOI_BODY"
+      run: |
+        git-koi render "$RUNNER_TEMP/koi-snapshot.json" --output-dir "$KOI_OUTPUT_DIR" --body "$KOI_BODY"
+    - name: Build the Wukong renderer
+      if: inputs.character == 'wukong'
+      shell: bash
+      run: cargo build --release --manifest-path "$GITHUB_ACTION_PATH/Cargo.toml"
+    - name: Render Wukong
+      if: inputs.character == 'wukong'
+      shell: bash
+      env:
+        WUKONG_OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: "$GITHUB_ACTION_PATH/target/release/git-koi" render-wukong "$RUNNER_TEMP/koi-snapshot.json" --output-dir "$WUKONG_OUTPUT_DIR"
