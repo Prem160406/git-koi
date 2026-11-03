@@ -1,0 +1,43 @@
+{
+  "atlas_width": 1286,
+  "atlas_height": 368,
+  "source": "User-approved Sun Wukong Pixel Art Evolution Board, Evolution Line section",
+  "note": "Transparent RGBA atlas. Sprites have four transparent pixels of safety padding, twelve pixels between atlas rectangles, and a shared baseline at y=360. Sprite art is extracted without rescaling.",
+  "sprites": {
+    "celestial_stone": {
+      "x": 8,
+      "y": 126,
+      "width": 191,
+      "height": 234,
+      "baseline": 360
+    },
+    "stone_born_monkey": {
+      "x": 211,
+      "y": 155,
+      "width": 167,
+      "height": 205,
+      "baseline": 360
+    },
+    "handsome_monkey_king": {
+      "x": 390,
+      "y": 111,
+      "width": 192,
+      "height": 249,
+      "baseline": 360
+    },
+    "great_sage": {
+      "x": 594,
+      "y": 54,
+      "width": 301,
+      "height": 306,
+      "baseline": 360
+    },
+    "fighting_buddha": {
+      "x": 907,
+      "y": 8,
+      "width": 371,
+      "height": 352,
+      "baseline": 360
+    }
+  }
+}

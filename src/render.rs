@@ -44,8 +44,7 @@ impl KoiFrame {
         self.rgba_pixels.as_flattened()
     }
 
-    /// Build a frame from chosen pixels, for encoder tests that need colors no koi has.
-    #[cfg(test)]
+    /// Build a frame from renderer-owned RGBA pixels.
     pub(crate) fn from_rgba_pixels(rgba_pixels: Vec<[u8; 4]>) -> Self {
         Self { rgba_pixels }
     }

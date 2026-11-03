@@ -27,6 +27,19 @@ the Rust library underneath is published on crates.io.
 └── action.yml    the GitHub Action
 ```
 
+## Wukong prototype
+
+The `wukong/prototype` branch adds a second character direction alongside the
+original koi. Wukong evolves through five permanent forms based on lifetime
+contributions, while recent activity controls his daily behaviour. See
+[the Wukong design notes](docs/wukong-design.md) and
+[the profile workflow example](examples/wukong-profile-workflow.yml).
+
+The Wukong renderer currently uses one approved reference pose per stage and
+procedural motion/effects for the GIF. Production walk cycles, staff attacks,
+and transformation sequences still require dedicated, consistent sprite frames.
+The original koi mode remains the default and is unchanged.
+
 ## Usage
 
 ### Requirements

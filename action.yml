@@ -1,21 +1,24 @@
 name: git-profile-koi
 description:
-  Draw a GitHub account's koi from its public activity as a looping GIF, a still
-  PNG, and a preview, for a profile README.
+  Draw a GitHub account's activity as a looping pixel-art koi or Sun Wukong GIF,
+  with a still PNG and preview, for a profile README.
 branding:
   icon: droplet
   color: blue
 
 inputs:
+  character:
+    description: Character to render, either koi or wukong.
+    default: koi
   login:
-    description: Account whose koi to draw.
+    description: GitHub account whose activity determines the character.
     default: ${{ github.repository_owner }}
   body:
-    description: Body color, one of white, black, asagi, tea, gold, or platinum.
+    description: Koi body color, one of white, black, asagi, tea, gold, or platinum.
     default: white
   output-dir:
     description:
-      Folder, relative to the workspace, that receives koi.gif, koi.png, and
+      Folder, relative to the workspace, that receives the character GIF, PNG, and
       preview.html.
     default: koi
   token:
@@ -27,6 +30,7 @@ runs:
   using: composite
   steps:
     - name: Download the git-koi release this Action belongs to
+      if: inputs.character == 'koi'
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
@@ -48,7 +52,7 @@ runs:
         mkdir -p "$install_dir"
         if ! gh release download "v$version" --repo "$repository" --dir "$install_dir" \
             --pattern "$archive" --pattern "$archive.sha256"; then
-          echo "release v$version has no asset $archive; reference the Action at a release tag" >&2
+          echo "git-koi has no release asset $archive; reference the Action at a release tag" >&2
           exit 1
         fi
         cd "$install_dir"
@@ -59,18 +63,41 @@ runs:
         fi
         tar -xzf "$archive"
         echo "$install_dir/git-koi-$version-$target" >> "$GITHUB_PATH"
+    - name: Validate character selection
+      shell: bash
+      env:
+        CHARACTER: ${{ inputs.character }}
+      run: |
+        case "$CHARACTER" in
+          koi|wukong) ;;
+          *) echo "character must be 'koi' or 'wukong'" >&2; exit 2 ;;
+        esac
+    - name: Install the Rust toolchain
+      if: inputs.character == 'wukong'
+      uses: dtolnay/rust-toolchain@stable
+    - name: Build the Wukong renderer
+      if: inputs.character == 'wukong'
+      shell: bash
+      run: cargo build --release --manifest-path "$GITHUB_ACTION_PATH/Cargo.toml"
+    - name: Add the Wukong binary to PATH
+      if: inputs.character == 'wukong'
+      shell: bash
+      run: echo "$GITHUB_ACTION_PATH/target/release" >> "$GITHUB_PATH"
     - name: Collect the account snapshot
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
         KOI_LOGIN: ${{ inputs.login }}
-      run:
-        git-koi collect "$KOI_LOGIN" --output "$RUNNER_TEMP/koi-snapshot.json"
+      run: git-koi collect "$KOI_LOGIN" --output "$RUNNER_TEMP/koi-snapshot.json"
     - name: Render the koi
+      if: inputs.character == 'koi'
       shell: bash
       env:
         KOI_BODY: ${{ inputs.body }}
         KOI_OUTPUT_DIR: ${{ inputs.output-dir }}
-      run:
-        git-koi render "$RUNNER_TEMP/koi-snapshot.json" --output-dir
-        "$KOI_OUTPUT_DIR" --body "$KOI_BODY"
+      run: |
+        git-koi render "$RUNNER_TEMP/koi-snapshot.json" --output-dir "$KOI_OUTPUT_DIR" --body "$KOI_BODY"
+    - name: Render Wukong
+      if: inputs.character == 'wukong'
+      shell: bash
+      run: git-koi render-wukong "$RUNNER_TEMP/koi-snapshot.json" --output-dir "${{ inputs.output-dir }}"
