@@ -12,7 +12,7 @@ use git_koi::collect::{GhCli, collect_account_snapshot};
 use git_koi::history::AccountSnapshot;
 use git_koi::koi::derive_koi_development;
 use git_koi::motion::frame_count;
-use git_koi::output::{encode_gif, encode_png, encode_preview_html};
+use git_koi::output::{encode_gif, encode_png, encode_preview_html, encode_wukong_gif};
 use git_koi::render::{KoiFrame, render_koi, render_swim_frame};
 use git_koi::wukong::{EvolutionThresholds, stage_for_contributions};
 use git_koi::wukong_render::{WukongBehavior, render_wukong_frame};
@@ -222,7 +222,7 @@ fn render_wukong_day(snapshot_path: &Path) -> Result<RenderedWukongDay, String> 
     let frames: Vec<KoiFrame> = (0..behavior.frame_count())
         .map(|frame_index| render_wukong_frame(stage, behavior, frame_index))
         .collect();
-    let gif_bytes = encode_gif(&frames).map_err(|encoding_error| encoding_error.to_string())?;
+    let gif_bytes = encode_wukong_gif(&frames).map_err(|encoding_error| encoding_error.to_string())?;
     let png_bytes = encode_png(&render_wukong_frame(stage, WukongBehavior::Meditating, 0))
         .map_err(|encoding_error| encoding_error.to_string())?;
     let caption = format!(

@@ -54,11 +54,12 @@ numbers as final balancing or an account-age fairness policy.
 
 ## Asset production requirements
 
-The concept sheet is a visual reference, not a production sprite sheet. Before the
-character renderer is implemented, produce individual transparent-background assets
-with consistent pixel scale and aligned baselines. Each form will need idle, walk, and
-behaviour-specific animation frames. Background clouds, aura, leaves, and sparks should
-be separable layers where practical.
+The approved evolution board's Evolution Line is the source for the current five
+transparent still sprites in `assets/wukong/atlas.png`. Their extracted rectangles,
+padding, and shared baseline are documented in `assets/wukong/atlas.json`. The atlas
+does not contain the Behaviour States or Sprite Showcase figures, and it is not a
+frame-by-frame animation sheet.
 
-The next asset milestone is to approve a single Stone-born Monkey production sprite
-before deriving the remaining four forms from it.
+Each form will need dedicated idle, walk, and behaviour-specific animation frames in a
+later asset milestone. Background clouds, aura, leaves, and sparks should be separable
+layers where practical. Keep the approved designs when producing those frames.

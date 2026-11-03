@@ -206,6 +206,89 @@ pub fn encode_gif(koi_frames: &[KoiFrame]) -> Result<Vec<u8>, GifEncodingError> 
     Ok(gif_encoder.into_inner()?)
 }
 
+/// Encode Wukong frames with one shared 3-3-2-bit color palette for the whole loop.
+/// One color-cube corner is folded into its neighbor to reserve palette index zero for
+/// transparency. Koi keeps using [`encode_gif`] and its exact per-frame palettes.
+pub fn encode_wukong_gif(koi_frames: &[KoiFrame]) -> Result<Vec<u8>, GifEncodingError> {
+    if koi_frames.is_empty() {
+        return Err(GifEncodingError::NoFrames);
+    }
+
+    // Index zero is reserved for transparent pixels; indices 1..=255 are shared
+    // across every frame. The last 3-3-2 cube color maps to the preceding entry.
+    let mut global_palette = vec![0, 0, 0];
+    for color_code in 0u16..255 {
+        let red = ((color_code >> 6) as u8) << 6;
+        let green = (((color_code >> 3) & 0b111) as u8) << 5;
+        let blue = ((color_code & 0b111) as u8) << 5;
+        global_palette.extend([red, green, blue]);
+    }
+
+    let mut gif_encoder = gif::Encoder::new(
+        Vec::new(),
+        STATIC_WIDTH_PIXELS as u16,
+        STATIC_HEIGHT_PIXELS as u16,
+        &global_palette,
+    )?;
+    gif_encoder.set_repeat(gif::Repeat::Infinite)?;
+
+    for (frame_index, koi_frame) in koi_frames.iter().enumerate() {
+        let native_pixels = koi_frame.as_rgba_bytes().as_chunks::<4>().0;
+        let [box_left, box_top, box_width, box_height] = find_drawn_box(native_pixels);
+        let mut native_indices = Vec::with_capacity((box_width * box_height) as usize);
+        for native_y in box_top..box_top + box_height {
+            for native_x in box_left..box_left + box_width {
+                let [red, green, blue, alpha] =
+                    native_pixels[(native_y * FRAME_WIDTH_PIXELS + native_x) as usize];
+                let palette_index = match alpha {
+                    0 => GIF_TRANSPARENT_INDEX,
+                    255 => {
+                        let red_bucket = red >> 6;
+                        let green_bucket = green >> 5;
+                        let blue_bucket = blue >> 5;
+                        let mut color_code = (u16::from(red_bucket) << 6)
+                            | (u16::from(green_bucket) << 3)
+                            | u16::from(blue_bucket);
+                        if color_code == 255 {
+                            color_code = 254;
+                        }
+                        (color_code + 1) as u8
+                    }
+                    _ => return Err(GifEncodingError::PartialTransparency { frame_index }),
+                };
+                native_indices.push(palette_index);
+            }
+        }
+
+        let mut export_indices = Vec::with_capacity(
+            native_indices.len() * (STATIC_EXPORT_SCALE * STATIC_EXPORT_SCALE) as usize,
+        );
+        for native_row in native_indices.chunks(box_width as usize) {
+            let export_row: Vec<u8> = native_row
+                .iter()
+                .flat_map(|&palette_index| [palette_index; STATIC_EXPORT_SCALE as usize])
+                .collect();
+            for _ in 0..STATIC_EXPORT_SCALE {
+                export_indices.extend_from_slice(&export_row);
+            }
+        }
+        gif_encoder.write_frame(&gif::Frame {
+            delay: calculate_elapsed_hundredths(frame_index + 1)
+                - calculate_elapsed_hundredths(frame_index),
+            dispose: gif::DisposalMethod::Background,
+            transparent: Some(GIF_TRANSPARENT_INDEX),
+            left: (box_left * STATIC_EXPORT_SCALE) as u16,
+            top: (box_top * STATIC_EXPORT_SCALE) as u16,
+            width: (box_width * STATIC_EXPORT_SCALE) as u16,
+            height: (box_height * STATIC_EXPORT_SCALE) as u16,
+            palette: None,
+            buffer: Cow::Owned(export_indices),
+            ..gif::Frame::default()
+        })?;
+    }
+    Ok(gif_encoder.into_inner()?)
+}
+
 /// The native box `[left, top, width, height]` around a frame's drawn pixels; a frame
 /// with none keeps one transparent pixel, since a GIF frame cannot be empty.
 fn find_drawn_box(native_pixels: &[[u8; 4]]) -> [u32; 4] {
@@ -340,6 +423,23 @@ mod tests {
             encode_gif(&crowded_frames),
             Err(GifEncodingError::TooManyColors { frame_index: 1 })
         ));
+    }
+
+    #[test]
+    fn wukong_gif_uses_one_global_palette_for_high_color_frames() {
+        let colors = (0..4).flat_map(|red| {
+            (0..8).flat_map(move |green| {
+                (0..8).map(move |blue| [red << 6, green << 5, blue << 5, 255])
+            })
+        });
+        let frames = [frame_with_colors(colors), frame_with_colors(distinct_colors(16))];
+        let gif_bytes = encode_wukong_gif(&frames).unwrap();
+        let mut decoder = gif::DecodeOptions::new()
+            .read_info(gif_bytes.as_slice())
+            .unwrap();
+        assert!(decoder.global_palette().is_some());
+        assert!(decoder.read_next_frame().unwrap().unwrap().palette.is_none());
+        assert!(decoder.read_next_frame().unwrap().unwrap().palette.is_none());
     }
 
     #[test]

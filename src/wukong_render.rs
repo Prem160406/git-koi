@@ -1,5 +1,5 @@
-//! Pixel-art Wukong renderer. The character atlas is derived from the approved concept
-//! sheet; it is a first static pose per evolution stage, not a finished animation sheet.
+//! Pixel-art Wukong renderer. The character atlas is extracted from the approved
+//! evolution board; it is one static pose per stage, not a finished animation sheet.
 
 use std::io::Cursor;
 use std::sync::OnceLock;
@@ -21,6 +21,7 @@ const GOLD_LIGHT: [u8; 3] = [255, 207, 112];
 const LEAF_RUST: [u8; 3] = [194, 83, 39];
 const LEAF_AMBER: [u8; 3] = [229, 151, 52];
 const LEAF_OLIVE: [u8; 3] = [173, 151, 57];
+const CLOUD_CREAM: [u8; 3] = [131, 91, 89];
 
 #[derive(Clone, Copy)]
 struct SpriteRect {
@@ -31,11 +32,36 @@ struct SpriteRect {
 }
 
 const SPRITES: [SpriteRect; 5] = [
-    SpriteRect { x: 0, y: 75, width: 70, height: 89 },
-    SpriteRect { x: 70, y: 71, width: 74, height: 93 },
-    SpriteRect { x: 144, y: 47, width: 91, height: 117 },
-    SpriteRect { x: 235, y: 19, width: 150, height: 145 },
-    SpriteRect { x: 385, y: 0, width: 184, height: 164 },
+    SpriteRect {
+        x: 8,
+        y: 126,
+        width: 191,
+        height: 234,
+    },
+    SpriteRect {
+        x: 211,
+        y: 155,
+        width: 167,
+        height: 205,
+    },
+    SpriteRect {
+        x: 390,
+        y: 111,
+        width: 192,
+        height: 249,
+    },
+    SpriteRect {
+        x: 594,
+        y: 54,
+        width: 301,
+        height: 306,
+    },
+    SpriteRect {
+        x: 907,
+        y: 8,
+        width: 371,
+        height: 352,
+    },
 ];
 
 struct Atlas {
@@ -79,6 +105,7 @@ impl WukongBehavior {
         }
     }
 
+    /// Return the number of frames in this behaviour's loop.
     pub fn frame_count(self) -> u32 {
         match self {
             Self::Meditating => 72,
@@ -94,6 +121,56 @@ pub fn render_wukong(stage: EvolutionStage) -> KoiFrame {
     render_wukong_frame(stage, WukongBehavior::Meditating, 0)
 }
 
+/// Render a transparent stage portrait with the production sprite and golden aura.
+///
+/// This keeps the renderer's native 256 × 256 canvas and shared character baseline,
+/// while leaving the surrounding background transparent for composition and review.
+pub fn render_wukong_sprite(stage: EvolutionStage) -> KoiFrame {
+    let mut pixels = vec![[0, 0, 0, 0]; (FRAME_WIDTH_PIXELS * FRAME_HEIGHT_PIXELS) as usize];
+    draw_aura(&mut pixels, stage, WukongBehavior::Meditating, 0.0);
+    draw_character(&mut pixels, stage, 0, 0);
+    KoiFrame::from_rgba_pixels(pixels)
+}
+
+/// Render only the transparent, animated aura and sparks for visual review.
+pub fn render_wukong_aura_frame(
+    stage: EvolutionStage,
+    behavior: WukongBehavior,
+    frame_index: u32,
+) -> KoiFrame {
+    let mut pixels = vec![[0, 0, 0, 0]; (FRAME_WIDTH_PIXELS * FRAME_HEIGHT_PIXELS) as usize];
+    let phase = loop_phase(behavior, frame_index);
+    draw_aura(&mut pixels, stage, behavior, phase);
+    draw_sparks(&mut pixels, stage, phase);
+    KoiFrame::from_rgba_pixels(pixels)
+}
+
+/// Render Wukong's environment layers without the character sprite.
+///
+/// The opaque background, clouds, leaves, aura, and behaviour-specific effects use
+/// the same drawing routines as [`render_wukong_frame`].
+pub fn render_wukong_environment_frame(
+    stage: EvolutionStage,
+    behavior: WukongBehavior,
+    frame_index: u32,
+) -> KoiFrame {
+    let mut pixels = vec![
+        [BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], 255];
+        (FRAME_WIDTH_PIXELS * FRAME_HEIGHT_PIXELS) as usize
+    ];
+    let phase = loop_phase(behavior, frame_index);
+    draw_background_clouds(&mut pixels, phase);
+    draw_aura(&mut pixels, stage, behavior, phase);
+    draw_leaves(&mut pixels, phase, behavior);
+    if behavior == WukongBehavior::CloudSurfing {
+        draw_cloud_surf_effect(&mut pixels, phase);
+    }
+    if behavior == WukongBehavior::Fighting {
+        draw_energy_sweep(&mut pixels, phase);
+    }
+    KoiFrame::from_rgba_pixels(pixels)
+}
+
 /// Render one frame of Wukong's behaviour loop. The source character art is currently
 /// one pose per stage; this renderer animates position, aura, clouds, leaves, and effects.
 /// Dedicated frame-by-frame body animation will replace these procedural motions later.
@@ -106,7 +183,7 @@ pub fn render_wukong_frame(
         [BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], 255];
         (FRAME_WIDTH_PIXELS * FRAME_HEIGHT_PIXELS) as usize
     ];
-    let phase = frame_index as f64 / behavior.frame_count() as f64 * std::f64::consts::TAU;
+    let phase = loop_phase(behavior, frame_index);
     draw_background_clouds(&mut pixels, phase);
     draw_aura(&mut pixels, stage, behavior, phase);
     let bob = match behavior {
@@ -126,11 +203,17 @@ pub fn render_wukong_frame(
         draw_cloud_surf_effect(&mut pixels, phase);
     }
     draw_character(&mut pixels, stage, bob, lunge);
-
+    draw_aura_front(&mut pixels, stage, phase);
+    draw_sparks(&mut pixels, stage, phase);
     if behavior == WukongBehavior::Fighting {
         draw_energy_sweep(&mut pixels, phase);
     }
     KoiFrame::from_rgba_pixels(pixels)
+}
+
+fn loop_phase(behavior: WukongBehavior, frame_index: u32) -> f64 {
+    let frame = frame_index % behavior.frame_count();
+    frame as f64 / behavior.frame_count() as f64 * std::f64::consts::TAU
 }
 
 fn atlas() -> &'static Atlas {
@@ -138,7 +221,10 @@ fn atlas() -> &'static Atlas {
         let mut decoder = png::Decoder::new(Cursor::new(ATLAS_PNG));
         decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
         let mut reader = decoder.read_info().expect("embedded Wukong atlas is valid PNG");
-        let mut buffer = vec![0; reader.output_buffer_size()];
+        let buffer_size = reader
+            .output_buffer_size()
+            .expect("embedded Wukong atlas has a known output buffer size");
+        let mut buffer = vec![0; buffer_size];
         let info = reader.next_frame(&mut buffer).expect("embedded Wukong atlas decodes");
         let bytes = &buffer[..info.buffer_size()];
         let pixels = match info.color_type {
@@ -199,11 +285,35 @@ fn draw_character(pixels: &mut [[u8; 4]], stage: EvolutionStage, bob: i32, lunge
 }
 
 fn draw_background_clouds(pixels: &mut [[u8; 4]], phase: f64) {
-    let drift = (phase.sin() * 8.0).round() as i32;
-    draw_cloud(pixels, -16 + drift, 42, 1.0);
-    draw_cloud(pixels, 158 - drift / 2, 25, 0.72);
-    draw_cloud(pixels, 178 + drift / 3, 106, 0.55);
-    draw_cloud(pixels, -32 - drift / 3, 155, 0.6);
+    let drift = (phase.sin() * 5.0).round() as i32;
+    draw_swirl_cloud(pixels, -7 + drift, 41, 1.15, CLOUD_DARK, CLOUD_MID, phase);
+    draw_swirl_cloud(pixels, 189 - drift / 2, 33, 0.78, CLOUD_DARK, CLOUD_CREAM, -phase * 0.7);
+    draw_swirl_cloud(pixels, 204 + drift / 3, 130, 0.75, CLOUD_DARK, CLOUD_MID, phase * 0.55);
+    draw_swirl_cloud(pixels, -9 - drift / 3, 170, 0.9, CLOUD_DARK, CLOUD_CREAM, -phase * 0.45);
+}
+
+fn draw_swirl_cloud(pixels: &mut [[u8; 4]], x: i32, y: i32, scale: f64, base: [u8; 3], highlight: [u8; 3], phase: f64) {
+    // Stepped cloud lobes and curled tails give the distant layers a hand-built pixel silhouette.
+    for (ox, oy, rx, ry) in [(-22, 5, 13, 7), (-11, 0, 15, 11), (3, -7, 13, 12), (16, -1, 14, 9), (29, 5, 11, 6)] {
+        let wobble = (phase.sin() * 1.2).round() as i32;
+        fill_ellipse(pixels, x + ((ox as f64 * scale) as i32), y + ((oy as f64 * scale) as i32) + wobble,
+            (rx as f64 * scale) as i32, (ry as f64 * scale) as i32, base);
+    }
+    fill_rect(pixels, x - (25.0 * scale) as i32, y + (5.0 * scale) as i32,
+        (55.0 * scale) as i32, (5.0 * scale) as i32, base);
+    fill_ellipse(pixels, x - (10.0 * scale) as i32, y - (7.0 * scale) as i32,
+        (8.0 * scale) as i32, (5.0 * scale) as i32, CLOUD_MID);
+    fill_ellipse(pixels, x + (15.0 * scale) as i32, y - (3.0 * scale) as i32,
+        (5.0 * scale) as i32, (3.0 * scale) as i32, CLOUD_CREAM);
+    for curl in 0..28 {
+        let t = curl as f64 / 27.0;
+        let angle = t * std::f64::consts::PI * 2.15 + phase * 0.12;
+        let radius = (2.0 + 8.0 * t) * scale;
+        let px = x + (-5.0 * scale) as i32 + (angle.cos() * radius).round() as i32;
+        let py = y - (6.0 * scale) as i32 + (angle.sin() * radius * 0.72).round() as i32;
+        put_pixel(pixels, px, py, highlight);
+        if curl % 4 == 0 { put_pixel(pixels, px + 1, py, highlight); }
+    }
 }
 
 fn draw_cloud(pixels: &mut [[u8; 4]], x: i32, y: i32, scale: f64) {
@@ -265,26 +375,73 @@ fn draw_aura(
     phase: f64,
 ) {
     let level = stage.index() as i32;
-    let pulse = (phase.sin() * 2.0).round() as i32;
-    let radius_x = 44 + level * 9 + pulse;
-    let radius_y = 56 + level * 12 + pulse;
-    let center_x = 128;
-    let center_y = 122;
-    draw_ring(pixels, center_x, center_y, radius_x, radius_y, GOLD_DARK);
-    if level >= 2 || behavior == WukongBehavior::Fighting {
-        draw_ring(pixels, center_x, center_y, radius_x - 3, radius_y - 5, GOLD);
+    let strength = [1, 2, 3, 4, 5][level as usize];
+    let motion = phase * match behavior { WukongBehavior::Meditating => 0.45, WukongBehavior::Training => 0.85, WukongBehavior::Fighting => 1.5, WukongBehavior::CloudSurfing => 0.7 };
+    let paths = [
+        (3.75, 0.48, 1.0, 32.0, 1), (4.25, 0.62, -2.2, 32.0, 1),
+        (4.8, 0.72, 3.3, 44.0, 2), (5.35, 0.62, -1.6, 44.0, 2),
+        (5.85, 0.55, 4.4, 36.0, 2), (0.05, 0.58, -4.5, 52.0, 2),
+    ];
+    for (index, (start, span, bend, length, thickness)) in paths.into_iter().enumerate().take(strength + 1) {
+        let a0 = start + motion * (0.26 + index as f64 * 0.11);
+        let extent = span + 0.06 * (motion * 2.0 + index as f64).sin();
+        for step in 0..(length as usize) {
+            let t = step as f64 / length;
+            let angle = a0 + t * extent;
+            let rx = 34.0 + level as f64 * 5.2 + bend * t;
+            let ry = 42.0 + level as f64 * 5.0 + bend * t * 0.55;
+            let flutter = (t * 7.0 + motion * 1.8 + index as f64).sin() * (3.0 + level as f64 * 0.8);
+            let cx = 128.0 + bend * 2.2 + (index as f64 * 5.5).sin() * 6.0;
+            let cy = 122.0 + (index as f64 * 2.3).cos() * 8.0;
+            let x = (cx + angle.cos() * rx + flutter * angle.sin()).round() as i32;
+            let y = (cy + angle.sin() * ry + flutter * angle.cos()).round() as i32;
+            let color = if t < 0.2 || t > 0.78 { GOLD_LIGHT } else if index % 2 == 0 { GOLD } else { LEAF_AMBER };
+            let actual_thickness = thickness + i32::from(level >= 3);
+            for thick in 0..actual_thickness { put_pixel(pixels, x + thick, y - thick / 2, color); }
+        }
+        // Each arc grows a tapered, flame-like tip that flickers independently.
+        let tip = a0 + extent;
+        let tx = 128 + (tip.cos() * (34.0 + level as f64 * 5.2)).round() as i32;
+        let ty = 132 + (tip.sin() * (42.0 + level as f64 * 5.0)).round() as i32;
+        draw_wisp(pixels, tx, ty, tip + 0.7, 4 + level, index as f64 + motion);
     }
-    if level >= 3 {
-        draw_ring(pixels, center_x, center_y, radius_x - 7, radius_y - 9, GOLD_LIGHT);
+    if level >= 4 { // cloud-facing curls make the final stage's aura meet the platform
+        draw_wisp(pixels, 66, 210, -0.25 + motion, 22, motion);
+        draw_wisp(pixels, 192, 204, 2.85 + motion, 20, motion + 2.0);
+    }
+    if behavior == WukongBehavior::Fighting { draw_wisp(pixels, 179, 130, 0.2 + motion, 18, motion); }
+}
+
+fn draw_wisp(pixels: &mut [[u8; 4]], x: i32, y: i32, angle: f64, length: i32, phase: f64) {
+    for step in 0..length {
+        let t = step as f64 / length.max(1) as f64;
+        let curl = (t * std::f64::consts::PI * 1.4 + phase).sin() * (2.0 + 3.0 * t);
+        let px = x + (angle.cos() * step as f64 + curl * angle.sin()).round() as i32;
+        let py = y + (angle.sin() * step as f64 - curl * angle.cos()).round() as i32;
+        put_pixel(pixels, px, py, if step % 4 == 0 { GOLD_LIGHT } else { GOLD });
     }
 }
 
-fn draw_ring(pixels: &mut [[u8; 4]], cx: i32, cy: i32, rx: i32, ry: i32, color: [u8; 3]) {
-    for degree in 0..360 {
-        let radians = degree as f64 * std::f64::consts::PI / 180.0;
-        let x = cx + (radians.cos() * rx as f64).round() as i32;
-        let y = cy + (radians.sin() * ry as f64).round() as i32;
-        put_pixel(pixels, x, y, color);
+fn draw_aura_front(pixels: &mut [[u8; 4]], stage: EvolutionStage, phase: f64) {
+    if stage.index() >= 3 {
+        draw_wisp(pixels, 88, 163, 1.2 + phase.sin() * 0.15, 11, phase);
+        draw_wisp(pixels, 164, 174, 2.0 + phase.cos() * 0.18, 8, phase + 1.0);
+    }
+}
+
+fn draw_sparks(pixels: &mut [[u8; 4]], stage: EvolutionStage, phase: f64) {
+    let count = 3 + stage.index() as usize * 3;
+    for i in 0..count {
+        let seed = i as f64 * 2.399 + stage.index() as f64 * 0.73;
+        let drift = (phase * (0.28 + (i % 3) as f64 * 0.09) + seed).sin();
+        let radius = 43.0 + ((i * 17) % 29) as f64;
+        let x = 128 + (seed.cos() * radius + drift * 5.0).round() as i32;
+        let y = 133 + (seed.sin() * radius * 0.83 + phase.cos() * 2.0).round() as i32;
+        if (phase * 2.0 + seed).sin() > -0.45 {
+            let color = if i % 3 == 0 { GOLD_LIGHT } else if i % 3 == 1 { GOLD } else { LEAF_RUST };
+            put_pixel(pixels, x, y, color);
+            if i % 2 == 0 { put_pixel(pixels, x + 1, y, color); put_pixel(pixels, x, y - 1, color); }
+        }
     }
 }
 

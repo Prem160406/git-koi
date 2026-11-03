@@ -1,5 +1,8 @@
 use git_koi::wukong::EvolutionStage;
-use git_koi::wukong_render::{WukongBehavior, render_wukong, render_wukong_frame};
+use git_koi::wukong_render::{
+    WukongBehavior, render_wukong, render_wukong_environment_frame, render_wukong_frame,
+    render_wukong_sprite,
+};
 
 const STAGES: [EvolutionStage; 5] = [
     EvolutionStage::CelestialStone,
@@ -55,4 +58,38 @@ fn fighting_has_a_distinct_frame_from_meditation() {
         8,
     );
     assert_ne!(meditating.as_rgba_bytes(), fighting.as_rgba_bytes());
+}
+
+#[test]
+fn individual_stage_portraits_keep_transparency_and_the_character() {
+    for stage in STAGES {
+        let portrait = render_wukong_sprite(stage);
+        let alpha_channels = portrait
+            .as_rgba_bytes()
+            .chunks_exact(4)
+            .map(|pixel| pixel[3]);
+        assert!(alpha_channels.clone().any(|alpha| alpha == 0));
+        assert!(alpha_channels.into_iter().any(|alpha| alpha == 255));
+    }
+}
+
+#[test]
+fn environment_preview_omits_the_character_but_keeps_opaque_effects() {
+    let frame = render_wukong_environment_frame(
+        EvolutionStage::VictoriousFightingBuddha,
+        WukongBehavior::CloudSurfing,
+        12,
+    );
+    assert!(
+        frame
+            .as_rgba_bytes()
+            .chunks_exact(4)
+            .any(|pixel| pixel[0..3] == [72, 48, 78])
+    );
+    assert!(
+        frame
+            .as_rgba_bytes()
+            .chunks_exact(4)
+            .all(|pixel| pixel[3] == 255)
+    );
 }

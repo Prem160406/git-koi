@@ -1,13 +1,43 @@
 {
-  "atlas_width": 569,
-  "atlas_height": 164,
-  "source": "User-approved evolution reference, cropped to transparent character sprites and reduced with nearest-neighbour sampling",
+  "atlas_width": 1286,
+  "atlas_height": 368,
+  "source": "User-approved Sun Wukong Pixel Art Evolution Board, Evolution Line section",
+  "note": "Transparent RGBA atlas. Sprites have four transparent pixels of safety padding, twelve pixels between atlas rectangles, and a shared baseline at y=360. Sprite art is extracted without rescaling.",
   "sprites": {
-    "celestial_stone": {"x": 0, "y": 75, "width": 70, "height": 89},
-    "stone_born_monkey": {"x": 70, "y": 71, "width": 74, "height": 93},
-    "handsome_monkey_king": {"x": 144, "y": 47, "width": 91, "height": 117},
-    "great_sage": {"x": 235, "y": 19, "width": 150, "height": 145},
-    "fighting_buddha": {"x": 385, "y": 0, "width": 184, "height": 164}
-  },
-  "note": "These are reference cutouts, not animation-ready frame sequences."
+    "celestial_stone": {
+      "x": 8,
+      "y": 126,
+      "width": 191,
+      "height": 234,
+      "baseline": 360
+    },
+    "stone_born_monkey": {
+      "x": 211,
+      "y": 155,
+      "width": 167,
+      "height": 205,
+      "baseline": 360
+    },
+    "handsome_monkey_king": {
+      "x": 390,
+      "y": 111,
+      "width": 192,
+      "height": 249,
+      "baseline": 360
+    },
+    "great_sage": {
+      "x": 594,
+      "y": 54,
+      "width": 301,
+      "height": 306,
+      "baseline": 360
+    },
+    "fighting_buddha": {
+      "x": 907,
+      "y": 8,
+      "width": 371,
+      "height": 352,
+      "baseline": 360
+    }
+  }
 }
